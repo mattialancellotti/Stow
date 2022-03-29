@@ -8,6 +8,19 @@ Param(
      [Parameter(Mandatory=$true)][string] $Path
 )
 
+# Checking if the user has root permissions
+$currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if ( !($currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) ) {
+     # Funny message and exiting
+     Write-Host "You gotta be administrator boyo!! Get off me."
+     exit
+}
+
 # Test
 Write-Host $Target
 Write-Host $Path
+
+Start-Sleep -seconds 20
+
+function Link-Files {
+}
