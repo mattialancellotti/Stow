@@ -8,12 +8,15 @@ Param(
      [Parameter(ParameterSetName='B', Mandatory)][string] $Unchain
 )
 
-function Check-Permissions {
-     $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-     if ( !($currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) ) {
-          Write-Host "You gotta be administrator boyo!! Get off me."
-          exit
-     }
+# Getting the user's current role and the administrative role
+$userRole = [Security.Principal.WindowsIdentity]::GetCurrent()
+$adminRole = [Security.Principal.WindowsBuiltInRole]::Administrator
+
+# Checking if the user has administrative privilages
+$userStatus = New-Object Security.Principal.WindowsPrincipal($userRole)
+if ( !($userRole.IsInRole($adminRole)) ) {
+     Write-Host "You gotta be administrator boyo!! Get off me."
+     exit
 }
 
 <#
