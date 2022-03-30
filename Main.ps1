@@ -5,11 +5,17 @@
 #       + If the chained package already exists it cannot be unchained if not
 #         root is found.
 #   - Better error handling and better messages to the user;
+
+# This sets the default parameter set to A (basically chains files)
 [CmdletBinding(DefaultParameterSetName = 'A')]
 Param(
      [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Path,
      [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Target,
-     [Parameter(ParameterSetName='A', Mandatory)][string] $Chain,
+
+     # These are the actions the program can do.
+     # All of the are mandatory but since they are in differenet parameter sets
+     # only one can be used
+     [Parameter(ParameterSetName='A', Mandatory, Position=0)][string] $Chain,
      [Parameter(ParameterSetName='B', Mandatory)][string] $Unchain
 )
 
