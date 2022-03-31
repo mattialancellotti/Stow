@@ -15,8 +15,8 @@ Param(
      # These are the actions the program can do.
      # All of the are mandatory but since they are in differenet parameter sets
      # only one can be used
-     [Parameter(ParameterSetName='A', Mandatory, Position=0)][string] $Chain,
-     [Parameter(ParameterSetName='B', Mandatory)][string] $Unchain
+     [Parameter(ParameterSetName='A', Mandatory, Position=0)][string[]] $Pack,
+     [Parameter(ParameterSetName='B', Mandatory)][string[]] $Unpack
 )
 
 # Getting the user's current role and the administrative role
@@ -37,19 +37,15 @@ switch ($PSCmdlet.ParameterSetName) {
      "B" { Write-Host "Unchaining files."; Break }
 }
 
+# TODO Gotta put this into its own module
 function Link-Files {
-     Param(
-          [Parameter(Mandatory=$true)][string] $Target,
-          [Parameter(Mandatory=$true)][string] $Path
-     )
+     Param( [Parameter(Mandatory)][string[]] $Packages )
 
-     # Checking if the user can execute this program
-     Check-Permissions
-
-     # List all files in the `Path` directroy and then linking the in the
-     # `Target` directory with the same name.
-     # TODO Support for directories
-     Get-ChildItem -File | ForEach-Object {
-          New-Item -ItemType SymbolicLink -Path "$Path\$_" -Target $Target
+     $Packages | ForEach-Object {
+          Write-Verbose "LINK ($Package) => $Target\$_"
+          New-Item -ItemType SymbolicLink -Path "$Path\$_" -Target "$Target\$_" | Out-Null
      }
 }
+
+# Tests
+Link-Files $Pack
