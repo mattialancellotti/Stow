@@ -3,11 +3,14 @@
 #       + The path must exists;
 #       + The package to chain should not exists;
 #       + If the chained package already exists it cannot be unchained if not
-#         root is found.
+#         root is found;
+#       + Trim input and remove last '\'.
 #   - Better error handling and better messages to the user;
+#   - Rename `Path` to `Packdir`;
+#   - Rename `Target` to `Source`.
 
 # This sets the default parameter set to A (basically chains files)
-[CmdletBinding(DefaultParameterSetName = 'A')]
+[CmdletBinding(DefaultParameterSetName = 'Pack')]
 Param(
      [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Path,
      [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Target,
@@ -15,8 +18,8 @@ Param(
      # These are the actions the program can do.
      # All of the are mandatory but since they are in differenet parameter sets
      # only one can be used
-     [Parameter(ParameterSetName='A', Mandatory, Position=0)][string[]] $Pack,
-     [Parameter(ParameterSetName='B', Mandatory)][string[]] $Unpack
+     [Parameter(ParameterSetName='Pack',Mandatory,Position=0)][string[]] $Pack,
+     [Parameter(ParameterSetName='Unpack',Mandatory)][string[]] $Unpack
 )
 
 # Getting the user's current role and the administrative role
@@ -33,8 +36,8 @@ if ( !($userStatus.IsInRole($adminRole)) ) {
 # Choosing what the program should do based on the current parameter set.
 # Basically if the user wants to Chain or Unchain.
 switch ($PSCmdlet.ParameterSetName) {
-     "A" { Write-Host "Chaining files."; Break }
-     "B" { Write-Host "Unchaining files."; Break }
+     "Pack" { Write-Host "Packing files."; Break }
+     "Unpack" { Write-Host "Unpacking files."; Break }
 }
 
 # TODO Gotta put this into its own module
@@ -42,7 +45,7 @@ function Link-Files {
      Param( [Parameter(Mandatory)][string[]] $Packages )
 
      $Packages | ForEach-Object {
-          Write-Verbose "LINK ($Package) => $Target\$_"
+          Write-Verbose "LINK ($_) => $Target\$_"
           New-Item -ItemType SymbolicLink -Path "$Path\$_" -Target "$Target\$_" | Out-Null
      }
 }
