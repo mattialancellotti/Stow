@@ -71,6 +71,8 @@ function Link-Files {
 
                # If the current file is a directory then we don't need to
                # create it but just to get deeper into the directory structure.
+               #
+               # TODO: Check if it's not a file with the same name
                if ((Get-Item $Dst\$_) -is [System.IO.DirectoryInfo]) {
                     Link-Files -Pkg $_ -Dst $Dst\$_ -Src $Src\$Pkg
                } else {
