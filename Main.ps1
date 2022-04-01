@@ -12,8 +12,8 @@
 # This sets the default parameter set to A (basically chains files)
 [CmdletBinding(DefaultParameterSetName = 'Pack')]
 Param(
-     [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Path,
-     [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Target,
+     [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Packdir,
+     [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Source,
 
      # These are the actions the program can do.
      # All of the are mandatory but since they are in differenet parameter sets
@@ -42,7 +42,6 @@ switch ($PSCmdlet.ParameterSetName) {
 
 # TODO
 #   The real workflow would be:
-#       - Check if the package exists;
 #       - Take everything that it's in there:
 #           + A directory (exists?):
 #               - Yes: do not create and go deeper
@@ -51,13 +50,39 @@ switch ($PSCmdlet.ParameterSetName) {
 #               - Yes: warn the user
 #               - No: Link it
 function Link-Files {
-     Param( [Parameter(Mandatory)][string[]] $Packages )
+     Param(
+          [Parameter(Mandatory)][string] $Pkg,
+          [Parameter(Mandatory)][string] $Dst,
+          [Parameter(Mandatory)][string] $Src
+     )
 
-     $Packages | ForEach-Object {
-          Write-Verbose "LINK ($_) => $Target\$_"
-          New-Item -ItemType SymbolicLink -Path "$Path\$_" -Target "$Target\$_" | Out-Null
+     # Getting a list of all the files/directories in $Pkg (the package getting
+     # packged by Packer, it could be the root package or a subfolder). Then
+     # each element gets processed.
+     Get-ChildItem $Src\$Pkg | ForEach-Object {
+          # First we want to know whether the current file is already present.
+          # This will eventually be useful for multiple reasons:
+          #     - Avoid overwriting files/recreating directories;
+          #     - Identify Packer's already present links.
+          #
+          # TODO: If $Dst\$_ is a link, check if it is owned by one of the
+          #       packages getting packed.
+          if (Test-Path $Dst\$_) {
+
+               # If the current file is a directory then we don't need to
+               # create it but just to get deeper into the directory structure.
+               if ((Get-Item $Dst\$_) -is [System.IO.DirectoryInfo]) {
+                    Link-Files -Pkg $_ -Dst $Dst\$_ -Src $Src\$Pkg
+               } else {
+                    Write-Host "File already exists."
+                    exit
+               }
+          } else {
+               Write-Verbose "LINK ($_) => $Dst\$_"
+               New-Item -ItemType SymbolicLink -Path "$Dst\$_" -Target "$Src\$Pkg\$_" | Out-Null
+          }
      }
 }
 
 # Tests
-Link-Files $Pack
+$Pack | ForEach-Object { Link-Files -Pkg $_ -Dst $Packdir -Src $Source }
