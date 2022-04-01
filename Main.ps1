@@ -40,7 +40,16 @@ switch ($PSCmdlet.ParameterSetName) {
      "Unpack" { Write-Host "Unpacking files."; Break }
 }
 
-# TODO Gotta put this into its own module
+# TODO
+#   The real workflow would be:
+#       - Check if the package exists;
+#       - Take everything that it's in there:
+#           + A directory (exists?):
+#               - Yes: do not create and go deeper
+#               - No: link it
+#           + A file (exists?):
+#               - Yes: warn the user
+#               - No: Link it
 function Link-Files {
      Param( [Parameter(Mandatory)][string[]] $Packages )
 
