@@ -2,12 +2,10 @@
 #   - Better parameter validation:
 #       + The path must exists;
 #       + The package to chain should not exists;
-#       + If the chained package already exists it cannot be unchained if not
+#       + If the chained package already exists it cannot be unchained if no
 #         root is found;
 #       + Trim input and remove last '\'.
-#   - Better error handling and better messages to the user;
-#   - Rename `Path` to `Packdir`;
-#   - Rename `Target` to `Source`.
+#   - Better error handling and better messages to the user.
 
 # This sets the default parameter set to A (basically chains files)
 [CmdletBinding(DefaultParameterSetName = 'Pack')]
