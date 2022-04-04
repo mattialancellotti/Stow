@@ -38,6 +38,14 @@ switch ($PSCmdlet.ParameterSetName) {
      "Unpack" { Write-Host "Unpacking files."; Break }
 }
 
+[CmdletBindig()]
+function Link-Files {
+     Param( [Parameter(Mandatory, ValueFromPipeline)][string[]] $Packages )
+
+     # Stowing each package
+     process { $Packages | Stow-Package -Src $Source -Dst $Packdir }
+}
+
 # TODO
 #   The real workflow would be:
 #       - Take everything that it's in there:
@@ -47,42 +55,52 @@ switch ($PSCmdlet.ParameterSetName) {
 #           + A file (exists?):
 #               - Yes: warn the user
 #               - No: Link it
-function Link-Files {
+[CmdletBinding()]
+function Stow-Package {
      Param(
           [Parameter(Mandatory)][string] $Pkg,
           [Parameter(Mandatory)][string] $Dst,
           [Parameter(Mandatory)][string] $Src
      )
 
-     # Getting a list of all the files/directories in $Pkg (the package getting
-     # packged by Packer, it could be the root package or a subfolder). Then
-     # each element gets processed.
-     Get-ChildItem $Src\$Pkg | ForEach-Object {
-          # First we want to know whether the current file is already present.
-          # This will eventually be useful for multiple reasons:
-          #     - Avoid overwriting files/recreating directories;
-          #     - Identify Packer's already present links.
-          #
-          # TODO: If $Dst\$_ is a link, check if it is owned by one of the
-          #       packages getting packed.
-          if (Test-Path $Dst\$_) {
+     begin
+     {
+          $CompletePath = $Src\$Pkg
+          $Content = $( Get-ChildItem $CompletePath )
+     }
 
-               # If the current file is a directory then we don't need to
-               # create it but just to get deeper into the directory structure.
-               #
-               # TODO: Check if it's not a file with the same name
-               if ((Get-Item $Dst\$_) -is [System.IO.DirectoryInfo]) {
-                    Link-Files -Pkg $_ -Dst $Dst\$_ -Src $Src\$Pkg
-               } else {
-                    Write-Host "File already exists."
-                    exit
+     process
+     {
+          foreach $i in $Content {
+               # First we want to know whether the current file is already present.
+               # This will eventually be useful for multiple reasons:
+               #     - Avoid overwriting files/recreating directories;
+               #     - Identify Stow's already present links.
+               if (Test-Path $Dst\$i) {
+                    # TODO: If it is a link pointing to Stow's package, exists
+                    # TODO: Everything else
                }
-          } else {
-               Write-Verbose "LINK ($_) => $Dst\$_"
-               New-Item -ItemType SymbolicLink -Path "$Dst\$_" -Target "$Src\$Pkg\$_" | Out-Null
+
           }
+     }
+     if (Test-Path $Dst\$_) {
+
+          # If the current file is a directory then we don't need to
+          # create it but just to get deeper into the directory structure.
+          #
+          # TODO: Check if it's not a file with the same name
+          if ((Get-Item $Dst\$_) -is [System.IO.DirectoryInfo]) {
+               Link-Files -Pkg $_ -Dst $Dst\$_ -Src $Src\$Pkg
+          } else {
+               Write-Host "File already exists."
+               exit
+          }
+     } else {
+          Write-Verbose "LINK ($_) => $Dst\$_"
+          New-Item -ItemType SymbolicLink -Path "$Dst\$_" -Target "$Src\$Pkg\$_" | Out-Null
      }
 }
 
 # Tests
-$Pack | ForEach-Object { Link-Files -Pkg $_ -Dst $Packdir -Src $Source }
+#$Pack | ForEach-Object { Link-Files -Pkg $_ -Dst $Packdir -Src $Source }
+$Pack | Link-Files
