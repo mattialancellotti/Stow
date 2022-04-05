@@ -38,8 +38,8 @@ switch ($PSCmdlet.ParameterSetName) {
      "Unpack" { Write-Host "Unpacking files."; Break }
 }
 
-[CmdletBindig()]
 function Link-Files {
+     [CmdletBinding()]
      Param( [Parameter(Mandatory, ValueFromPipeline)][string[]] $Packages )
 
      # Stowing each package
@@ -55,49 +55,46 @@ function Link-Files {
 #           + A file (exists?):
 #               - Yes: warn the user
 #               - No: Link it
-[CmdletBinding()]
 function Stow-Package {
+     [CmdletBinding()]
      Param(
-          [Parameter(Mandatory)][string] $Pkg,
+          [Parameter(Mandatory,ValueFromPipeline)][string] $Pkg,
           [Parameter(Mandatory)][string] $Dst,
           [Parameter(Mandatory)][string] $Src
      )
 
      begin
      {
-          $CompletePath = $Src\$Pkg
-          $Content = $( Get-ChildItem $CompletePath )
+          $SrcDir = "$Src\$Pkg"
+          Write-Host $SrcDir
+          $Content = @( Get-ChildItem $SrcDir )
      }
 
      process
      {
-          foreach $i in $Content {
-               # First we want to know whether the current file is already present.
-               # This will eventually be useful for multiple reasons:
+          foreach ($i in $Content) {
+               # First we want to know whether the current file is already
+               # present. This will eventually be useful for multiple reasons:
                #     - Avoid overwriting files/recreating directories;
                #     - Identify Stow's already present links.
                if (Test-Path $Dst\$i) {
                     # TODO: If it is a link pointing to Stow's package, exists
-                    # TODO: Everything else
+                    # If the path points to a directory, we need to go deeper;
+                    # If i points to a file, the programs fails and exits;
+                    # If it is a link to a directory, it depends whether the
+                    # direcatory is part of a package to stow or not.
+                    if ((Get-Item $Dst\$i) -is [System.IO.DirectoryInfo]) {
+                         Stow-Package -Pkg $i -Dst $Dst\$i -Src $SrcDir
+                    } else {
+                         Write-Host "${i}: File already exists."
+                         exit
+                    }
+               } else {
+                    Write-Verbose "LINK ($i) => $Dst\$i"
+                    New-Item -ItemType SymbolicLink -Path "$Dst\$i" -Target "$SrcDir\$i"
                }
 
           }
-     }
-     if (Test-Path $Dst\$_) {
-
-          # If the current file is a directory then we don't need to
-          # create it but just to get deeper into the directory structure.
-          #
-          # TODO: Check if it's not a file with the same name
-          if ((Get-Item $Dst\$_) -is [System.IO.DirectoryInfo]) {
-               Link-Files -Pkg $_ -Dst $Dst\$_ -Src $Src\$Pkg
-          } else {
-               Write-Host "File already exists."
-               exit
-          }
-     } else {
-          Write-Verbose "LINK ($_) => $Dst\$_"
-          New-Item -ItemType SymbolicLink -Path "$Dst\$_" -Target "$Src\$Pkg\$_" | Out-Null
      }
 }
 
