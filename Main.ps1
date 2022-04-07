@@ -39,11 +39,15 @@ switch ($PSCmdlet.ParameterSetName) {
 }
 
 function Link-Files {
-     [CmdletBinding()]
      Param( [Parameter(Mandatory, ValueFromPipeline)][string[]] $Packages )
 
      # Stowing each package
-     process { $Packages | Stow-Package -Src $Source -Dst $Packdir }
+     process
+     {
+          foreach ($i in $Packages) {
+               Stow-Package -Src $Source -Dst $Packdir -Pkg $i
+          }
+     }
 }
 
 # TODO
@@ -58,7 +62,7 @@ function Link-Files {
 function Stow-Package {
      [CmdletBinding()]
      Param(
-          [Parameter(Mandatory,ValueFromPipeline)][string] $Pkg,
+          [Parameter(Mandatory)][string[]] $Pkg,
           [Parameter(Mandatory)][string] $Dst,
           [Parameter(Mandatory)][string] $Src
      )
@@ -66,7 +70,6 @@ function Stow-Package {
      begin
      {
           $SrcDir = "$Src\$Pkg"
-          Write-Host $SrcDir
           $Content = @( Get-ChildItem $SrcDir )
      }
 
@@ -78,9 +81,10 @@ function Stow-Package {
                #     - Avoid overwriting files/recreating directories;
                #     - Identify Stow's already present links.
                if (Test-Path $Dst\$i) {
-                    # TODO: If it is a link pointing to Stow's package, exists
+                    # TODO: If it is a link pointing to Stow's package
+
                     # If the path points to a directory, we need to go deeper;
-                    # If i points to a file, the programs fails and exits;
+                    # If it points to a file, the program fails and exits;
                     # If it is a link to a directory, it depends whether the
                     # direcatory is part of a package to stow or not.
                     if ((Get-Item $Dst\$i) -is [System.IO.DirectoryInfo]) {
@@ -91,7 +95,7 @@ function Stow-Package {
                     }
                } else {
                     Write-Verbose "LINK ($i) => $Dst\$i"
-                    New-Item -ItemType SymbolicLink -Path "$Dst\$i" -Target "$SrcDir\$i"
+                    New-Item -ItemType SymbolicLink -Path "$Dst\$i" -Target "$SrcDir\$i" | Out-Null
                }
 
           }
