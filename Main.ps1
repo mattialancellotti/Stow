@@ -8,7 +8,7 @@
 #   - Better error handling and better messages to the user.
 
 # This sets the default parameter set to A (basically chains files)
-[CmdletBinding(DefaultParameterSetName = 'Pack')]
+[CmdletBinding(DefaultParameterSetName = 'stow')]
 Param(
      [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Packdir,
      [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Source,
@@ -16,8 +16,8 @@ Param(
      # These are the actions the program can do.
      # All of the are mandatory but since they are in differenet parameter sets
      # only one can be used
-     [Parameter(ParameterSetName='Pack',Mandatory,Position=0)][string[]] $Pack,
-     [Parameter(ParameterSetName='Unpack',Mandatory)][string[]] $Unpack
+     [Parameter(ParameterSetName='stow',Mandatory,Position=0)][string[]] $Pack,
+     [Parameter(ParameterSetName='unstow',Mandatory)][string[]] $Unpack
 )
 
 # Getting the user's current role and the administrative role
@@ -34,8 +34,8 @@ if ( !($userStatus.IsInRole($adminRole)) ) {
 # Choosing what the program should do based on the current parameter set.
 # Basically if the user wants to Chain or Unchain.
 switch ($PSCmdlet.ParameterSetName) {
-     "Pack" { Write-Host "Packing files."; Break }
-     "Unpack" { Write-Host "Unpacking files."; Break }
+     "stow" { Write-Host "Packing files."; Break }
+     "unstow" { Write-Host "Unpacking files."; Break }
 }
 
 function Link-Files {
@@ -62,7 +62,7 @@ function Link-Files {
 function Stow-Package {
      [CmdletBinding()]
      Param(
-          [Parameter(Mandatory)][string[]] $Pkg,
+          [Parameter(Mandatory)][string] $Pkg,
           [Parameter(Mandatory)][string] $Dst,
           [Parameter(Mandatory)][string] $Src
      )
