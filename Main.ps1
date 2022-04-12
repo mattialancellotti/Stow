@@ -81,13 +81,14 @@ function Stow-Package {
                #     - Avoid overwriting files/recreating directories;
                #     - Identify Stow's already present links.
                if (Test-Path $Dst\$i) {
-                    # TODO: If it is a link pointing to Stow's package
-
                     # If the path points to a directory, we need to go deeper;
                     # If it points to a file, the program fails and exits;
                     # If it is a link to a directory, it depends whether the
                     # direcatory is part of a package to stow or not.
                     if ((Get-Item $Dst\$i) -is [System.IO.DirectoryInfo]) {
+                         # TODO: If it is a link pointing to Stow's package then
+                         # unstow it, create a new directory with the same
+                         # name, restow the previous package and go deeper.
                          Stow-Package -Pkg $i -Dst $Dst\$i -Src $SrcDir
                     } else {
                          Write-Host "${i}: File already exists."
