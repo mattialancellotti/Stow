@@ -38,6 +38,20 @@ switch ($PSCmdlet.ParameterSetName) {
      "unstow" { Write-Host "Unpacking files."; Break }
 }
 
+function Check-Ownership {
+     Param( [string] $File, [string] $Package )
+
+     # Information about the complete path of the package we are stowing
+     $AbsPackage = (Resolve-Path ($Source + $Package)).ToString()
+     $PkgLength  = $AbsPackage.Length
+     
+     # Complete path of the file
+     $AbsFile = (Resolve-Path $File).ToString()
+
+     # Checking if the 2 strings are identical and returning the result
+     return $AbsFile.substring(0, $PkgLength).Equals($AbsPackage)
+}
+
 function Link-Files {
      Param( [Parameter(Mandatory, ValueFromPipeline)][string[]] $Packages )
 
@@ -105,4 +119,5 @@ function Stow-Package {
 
 # Tests
 #$Pack | ForEach-Object { Link-Files -Pkg $_ -Dst $Packdir -Src $Source }
-$Pack | Link-Files
+#$Pack | Link-Files
+Write-Output $(Check-Ownership -File Downloads\godseye\bin -Package godseye)
