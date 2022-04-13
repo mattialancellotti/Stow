@@ -38,6 +38,10 @@ switch ($PSCmdlet.ParameterSetName) {
      "unstow" { Write-Host "Unpacking files."; Break }
 }
 
+# TODO: Check for non-existing file
+# TODO: Documentation
+# This function is needed because stow-package and unstow-package need to know
+# if a file can be touched, if not this function will warn them.
 function Check-Ownership {
      Param( [string] $File, [string] $Package )
 
@@ -120,4 +124,4 @@ function Stow-Package {
 # Tests
 #$Pack | ForEach-Object { Link-Files -Pkg $_ -Dst $Packdir -Src $Source }
 #$Pack | Link-Files
-Write-Output $(Check-Ownership -File Downloads\godseye\bin -Package godseye)
+Write-Output $(Check-Ownership -File Downloads\godseye\bi -Package godseye)
