@@ -27,8 +27,8 @@ $adminRole = [Security.Principal.WindowsBuiltInRole]::Administrator
 # Checking if the user has administrative privilages
 $userStatus = New-Object Security.Principal.WindowsPrincipal($userRole)
 if ( !($userStatus.IsInRole($adminRole)) ) {
-     Write-Host "You gotta be administrator boyo!! Get off me."
-     exit
+     Write-Error -Category PermissionDenied 'You gotta be administrator boyo!!'
+     exit 5 # 5 is the 'Access denied.' error code (net helpmsg 5)
 }
 
 # Choosing what the program should do based on the current parameter set.
@@ -45,7 +45,7 @@ function Check-Ownership {
      Param( [string] $File, [string] $Package )
 
      # Checking if the given file actually exists
-     if ( !(Test-Path $File) ) { return $False }
+     if ( !(Test-Path $File) ) { return 2 }
 
      # Information about the complete path of the package we are stowing
      $AbsPackage = (Resolve-Path ($Source + $Package)).ToString()
@@ -55,7 +55,12 @@ function Check-Ownership {
      $AbsFile = (Resolve-Path $File).ToString()
 
      # Checking if the 2 strings are identical and returning the result
-     return $AbsFile.substring(0, $PkgLength).Equals($AbsPackage)
+     $PackageRoot = $AbsFile.Substring(0, $PkgLength)
+     if ( $PackageRoot.Equals($AbsPackage) ) {
+          return 0
+     } else {
+          return 1
+     }
 }
 
 function Link-Files {
@@ -123,7 +128,19 @@ function Stow-Package {
      }
 }
 
+# TODO: Documentation
+# Workflow:
+#   foreach file in the given package/directory:
+#       if (it is not present) || (it is present && is a link to the right package):
+#           if yes, then proceed by deleting it;
+#       if it is a directory: go deeper and restart the process;
+#       if it is a link that poitns somewhere else:
+#           if the link exists, exit with an error;
+#           if it doesn't, tell the user to use -Force to delete it.
+function Unstow-Package {
+}
+
 # Tests
 #$Pack | ForEach-Object { Link-Files -Pkg $_ -Dst $Packdir -Src $Source }
 #$Pack | Link-Files
-Write-Output $(Check-Ownership -File Downloads\godseye\bi -Package godseye)
+Write-Output $(Check-Ownership -File Downloads\godseye\bin -Package godseye)
