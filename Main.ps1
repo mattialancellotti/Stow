@@ -16,8 +16,10 @@ Param(
      # These are the actions the program can do.
      # All of the are mandatory but since they are in differenet parameter sets
      # only one can be used
-     [Parameter(ParameterSetName='stow',Mandatory,Position=0)][string[]] $Pack,
-     [Parameter(ParameterSetName='unstow',Mandatory)][string[]] $Unpack
+     [Parameter(ParameterSetName='stow',Mandatory,ValueFromRemainingArguments)]
+     [string[]] $Pack,
+     [Parameter(ParameterSetName='unstow',Mandatory,ValueFromRemainingArguments)]
+     [string[]] $Unpack
 )
 
 # Getting the user's current role and the administrative role
@@ -29,13 +31,6 @@ $userStatus = New-Object Security.Principal.WindowsPrincipal($userRole)
 if ( !($userStatus.IsInRole($adminRole)) ) {
      Write-Error -Category PermissionDenied 'You gotta be administrator boyo!!'
      exit 5 # 5 is the 'Access denied.' error code (net helpmsg 5)
-}
-
-# Choosing what the program should do based on the current parameter set.
-# Basically if the user wants to Chain or Unchain.
-switch ($PSCmdlet.ParameterSetName) {
-     "stow" { Write-Host "Packing files."; Break }
-     "unstow" { Write-Host "Unpacking files."; Break }
 }
 
 # TODO: Documentation
@@ -60,18 +55,6 @@ function Check-Ownership {
           return 0
      } else {
           return 1
-     }
-}
-
-function Link-Files {
-     Param( [Parameter(Mandatory, ValueFromPipeline)][string[]] $Packages )
-
-     # Stowing each package
-     process
-     {
-          foreach ($i in $Packages) {
-               Stow-Package -Src $Source -Dst $Packdir -Pkg $i
-          }
      }
 }
 
@@ -140,7 +123,15 @@ function Stow-Package {
 function Unstow-Package {
 }
 
-# Tests
-#$Pack | ForEach-Object { Link-Files -Pkg $_ -Dst $Packdir -Src $Source }
-#$Pack | Link-Files
-Write-Output $(Check-Ownership -File Downloads\godseye\bin -Package godseye)
+# Choosing what the program should do based on the current parameter set.
+# Basically if the user wants to Chain or Unchain.
+switch ($PSCmdlet.ParameterSetName) {
+     'stow' {
+          foreach ($i in $Pack) {
+              Stow-Package -Src $Source -Dst $Packdir -Pkg $i
+          }
+
+          Break
+     }
+     "unstow" { Write-Host "Unpacking files."; Break }
+}
