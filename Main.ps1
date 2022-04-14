@@ -38,17 +38,19 @@ switch ($PSCmdlet.ParameterSetName) {
      "unstow" { Write-Host "Unpacking files."; Break }
 }
 
-# TODO: Check for non-existing file
 # TODO: Documentation
 # This function is needed because stow-package and unstow-package need to know
 # if a file can be touched, if not this function will warn them.
 function Check-Ownership {
      Param( [string] $File, [string] $Package )
 
+     # Checking if the given file actually exists
+     if ( !(Test-Path $File) ) { return $False }
+
      # Information about the complete path of the package we are stowing
      $AbsPackage = (Resolve-Path ($Source + $Package)).ToString()
      $PkgLength  = $AbsPackage.Length
-     
+
      # Complete path of the file
      $AbsFile = (Resolve-Path $File).ToString()
 
