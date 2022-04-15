@@ -43,7 +43,7 @@ function Check-Ownership {
      if ( !(Test-Path $File) ) { return 2 }
 
      # Information about the complete path of the package we are stowing
-     $AbsPackage = (Resolve-Path ($Source + $Package)).ToString()
+     $AbsPackage = (Resolve-Path $Package).ToString()
      $PkgLength  = $AbsPackage.Length
 
      # Complete path of the file
@@ -56,6 +56,21 @@ function Check-Ownership {
      } else {
           return 1
      }
+}
+
+function Link-Ownership {
+     Param( [string] $File, [string] $Package )
+
+     # Checking if the file exists
+     if ( !(Test-Path $File) ) { return 2 }
+
+     # Getting Link and Target information about the given file. Then checking
+     # if the file is a link. If it's not this function is useless.
+     $LinkFile = (Get-Item $File | Select-Object -Property LinkType,Target)
+     if ( [string]::isNullorEmpty($LinkFile.LinkType) ) { return 1 }
+
+     # If the file is a link than check if it is linked to the right target 
+     return Check-Ownership -File $LinkFile.Target -Package $Package
 }
 
 # TODO
@@ -99,7 +114,11 @@ function Stow-Package {
                          # name, restow the previous package and go deeper.
                          Stow-Package -Pkg $i -Dst $Dst\$i -Src $SrcDir
                     } else {
-                         Write-Host "${i}: File already exists."
+                         switch (Link-Ownership -File $Dst\$i -Package $Src\$Pkg) {
+                              1 { Write-Host "${i}: File exists and is not a link to $Src\$Pkg" }
+                              0 { Write-Host "${i}: File exists and is a link to $Pkg" }
+                         }
+
                          exit
                     }
                } else {
@@ -121,11 +140,28 @@ function Stow-Package {
 #           if the link exists, exit with an error;
 #           if it doesn't, tell the user to use -Force to delete it.
 function Unstow-Package {
+     param(
+          [Parameter(Mandatory)][string] $Source,
+          [Parameter(Mandatory)][string] $Packdir,
+          [Parameter(Mandatory)][string] $Pkg
+     )
+
+     begin {
+          $SrcDir = "$Source\$Pkg"
+          $Content = $( Get-ChildItem $Pkg )
+     }
+
+     process {
+          foreach ($i in $Content) {
+               if ( !(Test-Path "$Packdir\$i") -Or`
+                    (Test-Path "$Packdir\$i") ) {}
+          }
+     }
 }
 
 # Choosing what the program should do based on the current parameter set.
 # Basically if the user wants to stow or unstow.
 switch ($PSCmdlet.ParameterSetName) {
-     'stow' { $Pack | %{ Stow-Package -Src $Source -Dst $Packdir -Pkg $_ } }
+     'stow' { $Stow | %{ Stow-Package -Src $Source -Dst $Stowdir -Pkg $_ } }
      'unstow' { Write-Host "Unpacking files." }
 }
