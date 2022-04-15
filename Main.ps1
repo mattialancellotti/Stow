@@ -10,16 +10,16 @@
 # This sets the default parameter set to A (basically chains files)
 [CmdletBinding(DefaultParameterSetName = 'stow')]
 Param(
-     [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Packdir,
+     [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Stowdir,
      [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Source,
 
      # These are the actions the program can do.
      # All of the are mandatory but since they are in differenet parameter sets
      # only one can be used
      [Parameter(ParameterSetName='stow',Mandatory,ValueFromRemainingArguments)]
-     [string[]] $Pack,
+     [string[]] $Stow,
      [Parameter(ParameterSetName='unstow',Mandatory,ValueFromRemainingArguments)]
-     [string[]] $Unpack
+     [string[]] $Unstow
 )
 
 # Getting the user's current role and the administrative role
@@ -124,14 +124,8 @@ function Unstow-Package {
 }
 
 # Choosing what the program should do based on the current parameter set.
-# Basically if the user wants to Chain or Unchain.
+# Basically if the user wants to stow or unstow.
 switch ($PSCmdlet.ParameterSetName) {
-     'stow' {
-          foreach ($i in $Pack) {
-              Stow-Package -Src $Source -Dst $Packdir -Pkg $i
-          }
-
-          Break
-     }
-     "unstow" { Write-Host "Unpacking files."; Break }
+     'stow' { $Pack | %{ Stow-Package -Src $Source -Dst $Packdir -Pkg $_ } }
+     'unstow' { Write-Host "Unpacking files." }
 }
