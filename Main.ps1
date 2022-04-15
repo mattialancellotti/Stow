@@ -33,6 +33,9 @@ if ( !($userStatus.IsInRole($adminRole)) ) {
      exit 5 # 5 is the 'Access denied.' error code (net helpmsg 5)
 }
 
+# Declaring the list of stowed packages
+$script:Stowing = [System.Collections.ArrayList]::new()
+
 # TODO: Documentation
 # This function is needed because stow-package and unstow-package need to know
 # if a file can be touched, if not this function will warn them.
@@ -112,13 +115,19 @@ function Stow-Package {
                          # TODO: If it is a link pointing to Stow's package then
                          # unstow it, create a new directory with the same
                          # name, restow the previous package and go deeper.
+                         if ($(Link-Ownership -File $Dst\$i -Package $Source\$script:Stowing) -eq 0) {
+                              <# TODO: Unstow $Src\$Pkg, make dir, restow $Src\$Pkg #>
+                              Write-Host "Unstow and mkdir $script:Stowing, stow $Src\$Pkg"
+                         }
+
                          Stow-Package -Pkg $i -Dst $Dst\$i -Src $SrcDir
                     } else {
                          switch (Link-Ownership -File $Dst\$i -Package $Src\$Pkg) {
                               1 { Write-Host "${i}: File exists and is not a link to $Src\$Pkg" }
-                              0 { Write-Host "${i}: File exists and is a link to $Pkg" }
+                              0 { Write-Host "${i}: File exists and is a link to $Src\$Pkg" }
                          }
 
+                         Write-Host $script:Stowing
                          exit
                     }
                } else {
@@ -140,6 +149,7 @@ function Stow-Package {
 #           if the link exists, exit with an error;
 #           if it doesn't, tell the user to use -Force to delete it.
 function Unstow-Package {
+     [CmdletBinding()]
      param(
           [Parameter(Mandatory)][string] $Source,
           [Parameter(Mandatory)][string] $Packdir,
@@ -162,6 +172,6 @@ function Unstow-Package {
 # Choosing what the program should do based on the current parameter set.
 # Basically if the user wants to stow or unstow.
 switch ($PSCmdlet.ParameterSetName) {
-     'stow' { $Stow | %{ Stow-Package -Src $Source -Dst $Stowdir -Pkg $_ } }
+     'stow' { $Stow | %{ $script:Stowing.Add($_); Stow-Package -Src $Source -Dst $Stowdir -Pkg $_ } }
      'unstow' { Write-Host "Unpacking files." }
 }
