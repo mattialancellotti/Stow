@@ -27,7 +27,7 @@ $userRole = [Security.Principal.WindowsIdentity]::GetCurrent()
 $adminRole = [Security.Principal.WindowsBuiltInRole]::Administrator
 
 # Checking if the user has administrative privilages
-$userStatus = New-Object Security.Principal.WindowsPrincipal($userRole)
+$userStatus = [Security.Principal.WindowsPrincipal]::new($userRole)
 if ( !($userStatus.IsInRole($adminRole)) ) {
      Write-Error -Category PermissionDenied 'You gotta be administrator boyo!!'
      exit 5 # 5 is the 'Access denied.' error code (net helpmsg 5)
