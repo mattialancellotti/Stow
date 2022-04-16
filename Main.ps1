@@ -11,7 +11,7 @@
 [CmdletBinding(DefaultParameterSetName = 'stow')]
 Param(
      [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Stowdir,
-     [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Source,
+     [Parameter(Mandatory)][ValidateScript({Test-Path $_})][string] $Sourcedir,
 
      # These are the actions the program can do.
      # All of the are mandatory but since they are in differenet parameter sets
@@ -33,9 +33,6 @@ if ( !($userStatus.IsInRole($adminRole)) ) {
      exit 5 # 5 is the 'Access denied.' error code (net helpmsg 5)
 }
 
-# Declaring the list of stowed packages
-$script:Stowing = [System.Collections.ArrayList]::new()
-
 # TODO: Documentation
 # This function is needed because stow-package and unstow-package need to know
 # if a file can be touched, if not this function will warn them.
@@ -46,7 +43,7 @@ function Check-Ownership {
      if ( !(Test-Path $File) ) { return 2 }
 
      # Information about the complete path of the package we are stowing
-     $AbsPackage = (Resolve-Path $Package).ToString()
+     $AbsPackage = (Resolve-Path $Sourcedir\$Package).ToString()
      $PkgLength  = $AbsPackage.Length
 
      # Complete path of the file
@@ -70,7 +67,7 @@ function Link-Ownership {
      # Getting Link and Target information about the given file. Then checking
      # if the file is a link. If it's not this function is useless.
      $LinkFile = (Get-Item $File | Select-Object -Property LinkType,Target)
-     if ( [string]::isNullorEmpty($LinkFile.LinkType) ) { return 1 }
+     if ( [string]::isNullorEmpty($LinkFile.LinkType) ) { return -1 }
 
      # If the file is a link than check if it is linked to the right target 
      return Check-Ownership -File $LinkFile.Target -Package $Package
@@ -88,51 +85,47 @@ function Link-Ownership {
 function Stow-Package {
      [CmdletBinding()]
      Param(
-          [Parameter(Mandatory)][string] $Pkg,
-          [Parameter(Mandatory)][string] $Dst,
-          [Parameter(Mandatory)][string] $Src
+          # $Source is literally where files are, while $Destination is where
+          # the link to them is going to appear.
+          [Parameter(Mandatory)][string] $Source,
+          [Parameter(Mandatory)][string] $Destination
      )
 
-     begin
-     {
-          $SrcDir = "$Src\$Pkg"
-          $Content = @( Get-ChildItem $SrcDir )
-     }
+     # Listing all the files we might have to stow in $Destination
+     begin { $Content = @( Get-ChildItem $Source ) }
 
-     process
-     {
+     process {
           foreach ($i in $Content) {
                # First we want to know whether the current file is already
                # present. This will eventually be useful for multiple reasons:
                #     - Avoid overwriting files/recreating directories;
                #     - Identify Stow's already present links.
-               if (Test-Path $Dst\$i) {
+               if (Test-Path $Destination\$i) {
                     # If the path points to a directory, we need to go deeper;
                     # If it points to a file, the program fails and exits;
                     # If it is a link to a directory, it depends whether the
                     # direcatory is part of a package to stow or not.
-                    if ((Get-Item $Dst\$i) -is [System.IO.DirectoryInfo]) {
+                    if ((Get-Item $Destination\$i) -is [System.IO.DirectoryInfo]) {
                          # TODO: If it is a link pointing to Stow's package then
                          # unstow it, create a new directory with the same
                          # name, restow the previous package and go deeper.
-                         if ($(Link-Ownership -File $Dst\$i -Package $Source\$script:Stowing) -eq 0) {
-                              <# TODO: Unstow $Src\$Pkg, make dir, restow $Src\$Pkg #>
-                              Write-Host "Unstow and mkdir $script:Stowing, stow $Src\$Pkg"
+                         switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
+                              2 { Write-Error "() $Destination\$i| something went wrong"; exit 2 }
+                              1 { Write-Error "() $Destination\$i| file is not mine"; exit 1 }
+                              0 { Write-Verbose "LINK ($i) $Destination\$i| File is our" }
+                              -1 { Stow-Package -Source $Source\$i -Destination $Destination\$i }
                          }
-
-                         Stow-Package -Pkg $i -Dst $Dst\$i -Src $SrcDir
                     } else {
-                         switch (Link-Ownership -File $Dst\$i -Package $Src\$Pkg) {
-                              1 { Write-Host "${i}: File exists and is not a link to $Src\$Pkg" }
-                              0 { Write-Host "${i}: File exists and is a link to $Src\$Pkg" }
+                         switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
+                              1 { Write-Host "${i}: File exists and is not a link to $Source" }
+                              0 { Write-Host "${i}: File exists and is a link to $Source" }
                          }
 
-                         Write-Host $script:Stowing
                          exit
                     }
                } else {
-                    Write-Verbose "LINK ($i) => $Dst\$i"
-                    New-Item -ItemType SymbolicLink -Path "$Dst\$i" -Target "$SrcDir\$i" | Out-Null
+                    Write-Verbose "LINK ($Source\$i) => $Destination\$i"
+                    New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
                }
 
           }
@@ -169,9 +162,13 @@ function Unstow-Package {
      }
 }
 
+# Initializing stowing cunter
+$StowCount = -1
+$Packages = if ($Stow) { $Stow.Clone() } else { $Unstow.Clone() }
+
 # Choosing what the program should do based on the current parameter set.
 # Basically if the user wants to stow or unstow.
 switch ($PSCmdlet.ParameterSetName) {
-     'stow' { $Stow | %{ $script:Stowing.Add($_); Stow-Package -Src $Source -Dst $Stowdir -Pkg $_ } }
+     'stow' { $Packages | %{ ++$StowCount; Stow-Package -Source $Sourcedir\$_ -Destination $Stowdir } }
      'unstow' { Write-Host "Unpacking files." }
 }
