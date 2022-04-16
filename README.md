@@ -2,12 +2,14 @@ LINK-FILES
 ----------
 
 ### Introduction
-This is a really simple PowerShell script that wants to emulate GNU Stow's
+This is a simple PowerShell script that wants to emulate GNU Stow's
 behaviour on Windows. As of now it really just takes all the files in the given
 directory and link them to the specified target.
 
 ### Installation
-As of now you have to install the module by hand.
+As of now there is no installation method. Also I do not recommend installing it
+since it is going to be split in multiple files and modules.  
+Just run it like this '.\Main.ps1 \<arguments\>'
 
 ### Usage
 To understand this program's syntax just run `Main.ps1 -?`, this will give you a
