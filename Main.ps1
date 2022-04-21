@@ -28,7 +28,7 @@ $adminRole = [Security.Principal.WindowsBuiltInRole]::Administrator
 
 # Checking if the user has administrative privilages
 $userStatus = [Security.Principal.WindowsPrincipal]::new($userRole)
-if ( !($userStatus.IsInRole($adminRole)) ) {
+if (!($userStatus.IsInRole($adminRole))) {
      Write-Error -Category PermissionDenied 'You gotta be administrator boyo!!'
      exit 5 # 5 is the 'Access denied.' error code (net helpmsg 5)
 }
@@ -40,7 +40,7 @@ function Check-Ownership {
      Param( [string] $File, [string] $Package )
 
      # Checking if the given file actually exists
-     if ( !(Test-Path $File) ) { return 2 }
+     if (!(Test-Path $File)) { return 2 }
 
      # Information about the complete path of the package we are stowing
      $AbsPackage = (Resolve-Path $Sourcedir\$Package).ToString()
@@ -62,7 +62,7 @@ function Link-Ownership {
      Param( [string] $File, [string] $Package )
 
      # Checking if the file exists
-     if ( !(Test-Path $File) ) { return 2 }
+     if (!(Test-Path $File)) { return 2 }
 
      # Getting Link and Target information about the given file. Then checking
      # if the file is a link. If it's not this function is useless.
@@ -92,7 +92,7 @@ function Stow-Package {
      )
 
      # Listing all the files we might have to stow in $Destination
-     begin { $Content = @( Get-ChildItem $Source ) }
+     begin { $Content = @(Get-ChildItem $Source) }
 
      process {
           foreach ($i in $Content) {
@@ -151,13 +151,13 @@ function Unstow-Package {
 
      begin {
           $SrcDir = "$Source\$Pkg"
-          $Content = $( Get-ChildItem $Pkg )
+          $Content = $(Get-ChildItem $Pkg)
      }
 
      process {
           foreach ($i in $Content) {
-               if ( !(Test-Path "$Packdir\$i") -Or`
-                    (Test-Path "$Packdir\$i") ) {}
+               if (!(Test-Path "$Packdir\$i") -Or`
+                    (Test-Path "$Packdir\$i")) {}
           }
      }
 }
