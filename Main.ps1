@@ -29,7 +29,7 @@ $adminRole = [Security.Principal.WindowsBuiltInRole]::Administrator
 # Checking if the user has administrative privilages
 $userStatus = [Security.Principal.WindowsPrincipal]::new($userRole)
 if (!($userStatus.IsInRole($adminRole))) {
-     Write-Error -Category PermissionDenied 'You gotta be administrator boyo!!'
+     Write-Error -Category PermissionDenied 'You need administration permissions'
      exit 5 # 5 is the 'Access denied.' error code (net helpmsg 5)
 }
 
@@ -112,7 +112,7 @@ function Stow-Package {
                          switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
                               2 { Write-Error "() $Destination\$i| something went wrong"; exit 2 }
                               -1 { Stow-Package -Source $Source\$i -Destination $Destination\$i }
-                              1 { Write-Error "() $Destination\$i| file is not mine"; }
+                              1 { Write-Host "$Destination\$i file's root is not"$Packages[$StowCount] }
                               0 {
                                    Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
                                    (Get-Item "$Destination\$i").Delete()
