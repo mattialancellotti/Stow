@@ -111,17 +111,25 @@ function Stow-Package {
                          # name, restow the previous package and go deeper.
                          switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
                               2 { Write-Error "() $Destination\$i| something went wrong"; exit 2 }
-                              1 { Write-Error "() $Destination\$i| file is not mine"; exit 1 }
-                              0 { Write-Verbose "LINK ($i) $Destination\$i| File is our" }
                               -1 { Stow-Package -Source $Source\$i -Destination $Destination\$i }
+                              1 { Write-Error "() $Destination\$i| file is not mine"; }
+                              0 {
+                                   Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
+                                   (Get-Item "$Destination\$i").Delete()
+                                   Write-Verbose "LINK ($Source\$i) => $Destination\$i"
+                                   New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
+                              }
                          }
                     } else {
                          switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
                               1 { Write-Host "${i}: File exists and is not a link to $Source" }
-                              0 { Write-Host "${i}: File exists and is a link to $Source" }
+                              0 {
+                                   Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
+                                   (Get-Item "$Destination\$i").Delete()
+                                   Write-Verbose "LINK ($Source\$i) => $Destination\$i"
+                                   New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
+                              }
                          }
-
-                         exit
                     }
                } else {
                     Write-Verbose "LINK ($Source\$i) => $Destination\$i"
@@ -164,7 +172,7 @@ function Unstow-Package {
 
 # Initializing stowing cunter
 $StowCount = -1
-$Packages = if ($Stow) { $Stow.Clone() } else { $Unstow.Clone() }
+$Packages = @(if ($Stow) { $Stow } else { $Unstow })
 
 # Choosing what the program should do based on the current parameter set.
 # Basically if the user wants to stow or unstow.
