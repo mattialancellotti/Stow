@@ -96,46 +96,68 @@ function Stow-Package {
 
      process {
           foreach ($i in $Content) {
-               # First we want to know whether the current file is already
-               # present. This will eventually be useful for multiple reasons:
-               #     - Avoid overwriting files/recreating directories;
-               #     - Identify Stow's already present links.
-               if (Test-Path $Destination\$i) {
-                    # If the path points to a directory, we need to go deeper;
-                    # If it points to a file, the program fails and exits;
-                    # If it is a link to a directory, it depends whether the
-                    # direcatory is part of a package to stow or not.
-                    if ((Get-Item $Destination\$i) -is [System.IO.DirectoryInfo]) {
-                         # TODO: If it is a link pointing to Stow's package then
-                         # unstow it, create a new directory with the same
-                         # name, restow the previous package and go deeper.
-                         switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
-                              2 { Write-Error "() $Destination\$i| something went wrong"; exit 2 }
-                              -1 { Stow-Package -Source $Source\$i -Destination $Destination\$i }
-                              1 { Write-Host "$Destination\$i file's root is not"$Packages[$StowCount] }
-                              0 {
-                                   Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
-                                   (Get-Item "$Destination\$i").Delete()
-                                   Write-Verbose "LINK ($Source\$i) => $Destination\$i"
-                                   New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
-                              }
+               # If the path (whether it's a file or a directory) does not exist
+               # create it.
+               if (!(Test-Path $Destination\$i)) {
+                    Write-Verbose "LINK ($Source\$i) => $Destination\$i"
+                    New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
+
+                    continue
+               }
+
+               # If it exists, checking the ownership will be useful to
+               # understand whether stow can re-link or deleted, or if it needs
+               # to move deeper in the path.
+               switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
+                    2 { Write-Error "Couldn't open file $Destination\$i" }
+                    -1 {
+                         if ((Get-Item $Destination\$i) -is [System.IO.DirectoryInfo]) {
+                              Stow-Package -Source $Source\$i -Destination $Destination\$i
+                         } else {
+                              Write-Host "${i}: File exists and is not a link."
                          }
-                    } else {
-                         switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
-                              1 { Write-Host "${i}: File exists and is not a link to $Source" }
-                              0 {
-                                   Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
-                                   (Get-Item "$Destination\$i").Delete()
-                                   Write-Verbose "LINK ($Source\$i) => $Destination\$i"
-                                   New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
-                              }
+                    }
+                    1 { Write-Host "$Destination\$i file's root is not "$Packages[$StowCount] }
+                    0 {
+                         Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
+                         (Get-Item "$Destination\$i").Delete()
+                         Write-Verbose "LINK ($Source\$i) => $Destination\$i"
+                         New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
+                    }
+               }
+
+<#
+               # If the path points to a directory, we need to go deeper;
+               # If it points to a file, the program fails and exits;
+               # If it is a link to a directory, it depends whether the
+               # direcatory is part of a package to stow or not.
+               if ((Get-Item $Destination\$i) -is [System.IO.DirectoryInfo]) {
+                    # TODO: If it is a link pointing to Stow's package then
+                    # unstow it, create a new directory with the same
+                    # name, restow the previous package and go deeper.
+                    switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
+                         2 { Write-Error "() $Destination\$i| something went wrong"; exit 2 }
+                         -1 { Stow-Package -Source $Source\$i -Destination $Destination\$i }
+                         1 { Write-Host "$Destination\$i file's root is not"$Packages[$StowCount] }
+                         0 {
+                              Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
+                              (Get-Item "$Destination\$i").Delete()
+                              Write-Verbose "LINK ($Source\$i) => $Destination\$i"
+                              New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
                          }
                     }
                } else {
-                    Write-Verbose "LINK ($Source\$i) => $Destination\$i"
-                    New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
+                    switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
+                         1 { Write-Host "${i}: File exists and is not a link to $Source" }
+                         0 {
+                              Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
+                              (Get-Item "$Destination\$i").Delete()
+                              Write-Verbose "LINK ($Source\$i) => $Destination\$i"
+                              New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
+                         }
+                    }
                }
-
+               #>
           }
      }
 }
