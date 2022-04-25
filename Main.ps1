@@ -117,47 +117,29 @@ function Stow-Package {
                               Write-Host "${i}: File exists and is not a link."
                          }
                     }
-                    1 { Write-Host "$Destination\$i file's root is not "$Packages[$StowCount] }
+                    1 {
+                         $Packages | %{
+                              $p = Link-Ownership -File $Destination\$i -Package $_
+                              if ($p -eq 0) {
+                                   Write-Verbose "INFO ($Destination\$i) Found conflict with $_."
+                                   Write-Verbose "UNLINK ($Sourcedir\$_\$i) <= $Destination\$i"
+                                   (Get-Item "$Destination\$i").Delete()
+                                   New-Item -ItemType Directory -Path "$Destination\$i" | Out-Null
+                                   Stow-Package -Source "$Sourcedir\$_\$i" -Destination "$Destination\$i"
+                                   Stow-Package -Source "$Source\$i" -Destination "$Destination\$i"
+
+                                   break
+                              }
+                         }
+                         Write-Host "$Destination\$i file's root is not"$Packages[$StowCount]
+                    }
                     0 {
-                         Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
+                         Write-Verbose "UNLINK ($Source\$i) <= $Destination\$i"
                          (Get-Item "$Destination\$i").Delete()
                          Write-Verbose "LINK ($Source\$i) => $Destination\$i"
                          New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
                     }
                }
-
-<#
-               # If the path points to a directory, we need to go deeper;
-               # If it points to a file, the program fails and exits;
-               # If it is a link to a directory, it depends whether the
-               # direcatory is part of a package to stow or not.
-               if ((Get-Item $Destination\$i) -is [System.IO.DirectoryInfo]) {
-                    # TODO: If it is a link pointing to Stow's package then
-                    # unstow it, create a new directory with the same
-                    # name, restow the previous package and go deeper.
-                    switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
-                         2 { Write-Error "() $Destination\$i| something went wrong"; exit 2 }
-                         -1 { Stow-Package -Source $Source\$i -Destination $Destination\$i }
-                         1 { Write-Host "$Destination\$i file's root is not"$Packages[$StowCount] }
-                         0 {
-                              Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
-                              (Get-Item "$Destination\$i").Delete()
-                              Write-Verbose "LINK ($Source\$i) => $Destination\$i"
-                              New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
-                         }
-                    }
-               } else {
-                    switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
-                         1 { Write-Host "${i}: File exists and is not a link to $Source" }
-                         0 {
-                              Write-Verbose "UNLINK ($Source\$i) => $Destination\$i"
-                              (Get-Item "$Destination\$i").Delete()
-                              Write-Verbose "LINK ($Source\$i) => $Destination\$i"
-                              New-Item -ItemType SymbolicLink -Path "$Destination\$i" -Target "$Source\$i" | Out-Null
-                         }
-                    }
-               }
-               #>
           }
      }
 }
