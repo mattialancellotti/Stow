@@ -33,7 +33,7 @@ if (!($userStatus.IsInRole($adminRole))) {
      exit 5 # 5 is the 'Access denied.' error code (net helpmsg 5)
 }
 
-enum Ownership {
+enum Codes {
      Owner = 0
      NotLink = 1
      FileNotFound = 2
@@ -47,7 +47,7 @@ function Check-Ownership {
      Param( [string] $File, [string] $Package )
 
      # Checking if the given file actually exists
-     if (!(Test-Path $File)) { return [Ownership]::FileNotFound }
+     if (!(Test-Path $File)) { return [Codes]::FileNotFound }
 
      # Information about the complete path of the package we are stowing
      $AbsPackage = (Resolve-Path $Sourcedir\$Package).ToString()
@@ -59,22 +59,22 @@ function Check-Ownership {
      # Checking if the 2 strings are identical and returning the result
      $PackageRoot = $AbsFile.Substring(0, $PkgLength)
      if ($PackageRoot.Equals($AbsPackage)) {
-          return [Ownership]::Owner
+          return [Codes]::Owner
      }
      
-     return [Ownership]::NotOwner
+     return [Codes]::NotOwner
 }
 
 function Link-Ownership {
      Param( [string] $File, [string] $Package )
 
      # Checking if the file exists
-     if (!(Test-Path $File)) { return [Ownership]::FileNotFound }
+     if (!(Test-Path $File)) { return [Codes]::FileNotFound }
 
      # Getting Link and Target information about the given file. Then checking
      # if the file is a link. If it's not this function is useless.
      $LinkFile = (Get-Item $File | Select-Object -Property LinkType,Target)
-     if ([string]::isNullorEmpty($LinkFile.LinkType)) { return [Ownership]::NotLink }
+     if ([string]::isNullorEmpty($LinkFile.LinkType)) { return [Codes]::NotLink }
 
      # If the file is a link than check if it is linked to the right target 
      return Check-Ownership -File $LinkFile.Target -Package $Package
@@ -84,7 +84,7 @@ function Get-RelativePackage {
      Param( [string] $File )
 
      # Checking if the file exists
-     if (!(Test-Path $File)) { return [Ownership]::FileNotFound }
+     if (!(Test-Path $File)) { return [Codes]::FileNotFound }
 
      $DstLength = $Stowdir.Length
 
@@ -127,23 +127,26 @@ function Stow-Package {
                # understand whether stow can re-link or deleted, or if it needs
                # to move deeper in the path.
                switch (Link-Ownership -File $Destination\$i -Package $Packages[$StowCount]) {
-                    $([Ownership]::FileNotFound) { Write-Error "Couldn't open file $Destination\$i" }
-                    $([Ownership]::NotLink) {
+                    $([Codes]::FileNotFound) { Write-Error "Couldn't open file $Destination\$i" }
+                    $([Codes]::NotLink) {
                          if ((Get-Item $Destination\$i) -is [System.IO.DirectoryInfo]) {
                               Stow-Package -Source $Source\$i -Destination $Destination\$i
                          } else {
                               Write-Host "${i}: File exists and is not a link."
                          }
                     }
-                    $([Ownership]::NotOwner) {
-                         # TODO: This just sucks
-                         # TODO: Check if it's not a file
+                    $([Codes]::NotOwner) {
+                         if ((Get-Item $Destination\$i) -is [System.IO.FileInfo]) {
+                              Write-Host "$Destination\$i is a file owned by someone else."
+                              exit 1
+                         }
+
                          # Checking if the directory's owner is one of the packages already stowed
                          $Packages | %{
                               $p = Link-Ownership -File $Destination\$i -Package $_
                               
                               # If the packages is found, unlink the directory
-                              if ($p -eq $([Ownership]::Owner)) {
+                              if ($p -eq $([Codes]::Owner)) {
                                    Write-Verbose "INFO ($Destination\$i) Found conflict with $_."
                                    Write-Verbose "UNLINK ($Sourcedir\$_\$i) <= $Destination\$i"
                                    (Get-Item "$Destination\$i").Delete()
@@ -157,7 +160,7 @@ function Stow-Package {
                          }
                          Write-Host "$Destination\$i file's root is not"$Packages[$StowCount]
                     }
-                    $([Ownership]::Owner) {
+                    $([Codes]::Owner) {
                          Write-Verbose "UNLINK ($Source\$i) <= $Destination\$i"
                          (Get-Item "$Destination\$i").Delete()
                          Write-Verbose "LINK ($Source\$i) => $Destination\$i"
