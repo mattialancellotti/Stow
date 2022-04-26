@@ -1,4 +1,4 @@
-LINK-FILES
+STOW CLONE
 ----------
 
 ### Introduction
