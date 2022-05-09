@@ -2,8 +2,6 @@
 #   - Better parameter validation:
 #       + The path must exists;
 #       + The package to chain should not exists;
-#       + If the chained package already exists it cannot be unchained if no
-#         root is found;
 #       + Trim input and remove last '\'.
 #   - Better error handling and better messages to the user.
 
@@ -209,5 +207,5 @@ $Packages = @(if ($Stow) { $Stow } else { $Unstow })
 # Basically if the user wants to stow or unstow.
 switch ($PSCmdlet.ParameterSetName) {
      'stow' { $Packages | %{ ++$StowCount; Stow-Package -Source $Sourcedir\$_ -Destination $Stowdir } }
-     'unstow' { Write-Host "Unpacking files." }
+     'unstow' { Write-Host "Unstowing files." }
 }
