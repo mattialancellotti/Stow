@@ -54,7 +54,7 @@ function Check-Ownership {
      $PkgLength  = $AbsPackage.Length
 
      # Complete path of the file
-     $AbsFile = (Resolve-Path $File).ToString()
+     $AbsFile = (Get-Item $File | Select -ExpandProperty FullName)
 
      # Checking if the 2 strings are identical and returning the result
      $PackageRoot = $AbsFile.Substring(0, $PkgLength)
